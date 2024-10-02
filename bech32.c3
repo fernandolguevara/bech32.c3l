@@ -18,7 +18,7 @@ fault Error {
     BECH32_UNKOWN_CHARACTER,
     BECH32_INVALID_CHECKSUM,
     BECH32_MISSING_PREFIX,
-    BECH32_SEPARATOR_CHARACTOR_NOT_FOUND,
+    BECH32_SEPARATOR_CHARACTER_NOT_FOUND,
     BECH32_MIXED_CASE_STRING_NOT_ALLOWED,
     BECH32_TOO_SHORT,
     BECH32_DATA_TOO_SHORT,
@@ -172,7 +172,7 @@ fn Decoded*! __decode(String str, int limit = 90, int encoding_cost = 1) @privat
     usz! split_idx = str.rindex_of("1");
 
     if (catch err = split_idx) {
-        return Error.BECH32_SEPARATOR_CHARACTOR_NOT_FOUND?;
+        return Error.BECH32_SEPARATOR_CHARACTER_NOT_FOUND?;
     } else if (split_idx == 0u) {
         return Error.BECH32_MISSING_PREFIX?;
     }
