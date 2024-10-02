@@ -5,6 +5,8 @@ Library ported from bitcoinjs/bech32
 ## Example
 
 ```c++
+import bech32;
+
 fn void! main(String[] args) {
 {
     Decoded* decoded = bech32::bech32_decode("abcdef1qpzry9x8gf2tvdw0s3jn54khce6mua7lmqqqxw")!;

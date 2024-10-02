@@ -10,7 +10,7 @@ struct Decoded {
 }
 
 const ENCODING_BECH32 = 1;
-const ENCODING_BECH32M = 0x2bc830a3;
+const ENCODING_BECH32M = 0x2BC8_30A3;
 
 const ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 
@@ -66,7 +66,7 @@ fn char[]! convert(char[] data, int inBits, int outBits, bool pad) @private {
     int maxV = (1 << outBits) - 1;
 
     CharArray result;
-
+    result.reserve(data.len * (inBits / outBits));
     for (char i = 0; i < data.len; ++i) {
         value = (value << inBits) | data[i];
         bits += inBits;
