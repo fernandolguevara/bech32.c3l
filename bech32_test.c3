@@ -72,7 +72,7 @@ fn void! test_bech32() {
     }
 
     if(catch err = bech32::bech32_decode("pzry9x0s0muk")){
-        assert(err == Error.BECH32_SEPARATOR_CHARACTOR_NOT_FOUND);
+        assert(err == Error.BECH32_SEPARATOR_CHARACTER_NOT_FOUND);
     } 
 
     if(catch err = bech32::bech32_decode("abc1rzgt4")){
@@ -195,7 +195,7 @@ fn void! test_benc32m() {
     }
 
     if(catch err = bech32::bech32m_decode("pzry9x0s0muk")){
-        assert(err == Error.BECH32_SEPARATOR_CHARACTOR_NOT_FOUND);
+        assert(err == Error.BECH32_SEPARATOR_CHARACTER_NOT_FOUND);
     }
 
     if(catch err = bech32::bech32m_decode("abc1rzgt4")){
