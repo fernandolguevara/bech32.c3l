@@ -1,8 +1,8 @@
 module bech32;
 
-import std::collections::list, std::core::dstring;
+import std::collections::list, std::core, std::core::dstring;
 
-def CharArray = List(<char>) @private;
+alias CharArray @private = List{char};
 
 struct Decoded {
     String prefix;
@@ -14,20 +14,7 @@ const ENCODING_BECH32M = 0x2BC8_30A3;
 
 const ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 
-fault Error {
-    BECH32_UNKOWN_CHARACTER,
-    BECH32_INVALID_CHECKSUM,
-    BECH32_MISSING_PREFIX,
-    BECH32_SEPARATOR_CHARACTER_NOT_FOUND,
-    BECH32_MIXED_CASE_STRING_NOT_ALLOWED,
-    BECH32_TOO_SHORT,
-    BECH32_DATA_TOO_SHORT,
-    BECH32_NON_5BIT_WORD,
-    BECH32_EXCEEDS_LENGTH_LIMIT,
-    BECH32_INVALID_PREFIX,
-    BECH32_EXCESS_PADDING,
-    BECH32_NON_ZERO_PADDING
-}
+faultdef BECH32_UNKOWN_CHARACTER, BECH32_INVALID_CHECKSUM, BECH32_MISSING_PREFIX, BECH32_SEPARATOR_CHARACTER_NOT_FOUND,  BECH32_MIXED_CASE_STRING_NOT_ALLOWED,  BECH32_TOO_SHORT, BECH32_DATA_TOO_SHORT, BECH32_NON_5BIT_WORD, BECH32_EXCEEDS_LENGTH_LIMIT, BECH32_INVALID_PREFIX,BECH32_EXCESS_PADDING, BECH32_NON_ZERO_PADDING;
 
 fn int polymod_step(int pre) @private {
     int b = pre >> 25;
@@ -42,12 +29,12 @@ fn int polymod_step(int pre) @private {
     );
 }
 
-fn int! prefix_chk(String prefix) @private {
+fn int? prefix_chk(String prefix) @private {
     int chk = 1;
     for (int i = 0; i < prefix.len; ++i) {
         char c = prefix[i];
         if (c < 33 || c > 126) {
-            return Error.BECH32_INVALID_PREFIX?;
+            return BECH32_INVALID_PREFIX~;
         }
         chk = polymod_step(chk) ^ (c >> 5);
     }
@@ -60,7 +47,7 @@ fn int! prefix_chk(String prefix) @private {
     return chk;
 }
 
-fn char[]! convert(char[] data, int inBits, int outBits, bool pad) @private {
+fn char[]? convert(char[] data, int inBits, int outBits, bool pad) @private {
     int value = 0;
     int bits = 0;
     int maxV = (1 << outBits) - 1;
@@ -85,18 +72,18 @@ fn char[]! convert(char[] data, int inBits, int outBits, bool pad) @private {
         }
     } else {
         if (bits >= inBits) {
-            return Error.BECH32_EXCESS_PADDING?;
+            return BECH32_EXCESS_PADDING~;
         }
         int t = (value << (outBits - bits)) & maxV;
         if (t) {
-            return Error.BECH32_NON_ZERO_PADDING?;
+            return BECH32_NON_ZERO_PADDING~;
         }
     }
 
     return result.to_tarray();
 }
 
-fn char[]! to_words(char[] bytes){
+fn char[]? to_words(char[] bytes){
     return convert(bytes, 8, 5, true);
 }
 
@@ -108,28 +95,28 @@ fn char[] from_words_unsafe(char[] words) {
     }
 }
 
-fn char[]! from_words(char[] words) {
+fn char[]? from_words(char[] words) {
     return convert(words, 5, 8, false);
 }
 
-fn String! __encode(String prefix, char[] words, int limit = 90, int encoding_cost = 1) @private {
+fn String? __encode(String prefix, char[] words, int limit = 90, int encoding_cost = 1) @private {
     if (prefix.len + 7 + words.len > limit) {
-        return Error.BECH32_EXCEEDS_LENGTH_LIMIT?;
+        return BECH32_EXCEEDS_LENGTH_LIMIT~;
     }
 
-    prefix.convert_ascii_to_lower();
+    prefix.convert_to_lower();
 
     // determine chk mod
     int chk = prefix_chk(prefix)!;
 
-    DString result = dstring::temp_new(prefix);
+    DString result = dstring::temp(prefix);
 
     result.append("1");
 
     for (int i = 0; i < words.len; ++i) {
         char x = words[i];
         if (x >> 5 != 0) {
-            return Error.BECH32_NON_5BIT_WORD?;
+            return BECH32_NON_5BIT_WORD~;
         }
         chk = polymod_step(chk) ^ x;
         result.append(ALPHABET[x]);
@@ -157,41 +144,41 @@ fn ichar get_alphabet_char_idx(char ci) @private {
     return -1;
 }
 
-fn Decoded*! __decode(String str, int limit = 90, int encoding_cost = 1) @private {
-    if (str.len < 8) return Error.BECH32_TOO_SHORT?;
-    if (str.len > limit) return Error.BECH32_EXCEEDS_LENGTH_LIMIT?;
+fn Decoded*? __decode(String str, int limit = 90, int encoding_cost = 1) @private {
+    if (str.len < 8) return BECH32_TOO_SHORT~;
+    if (str.len > limit) return BECH32_EXCEEDS_LENGTH_LIMIT~;
 
     // don't allow mixed case
-    String lowered = str.temp_ascii_to_lower();
-    String uppered = str.temp_ascii_to_upper();
+    String lowered = str.to_lower_tcopy();
+    String uppered = str.to_lower_tcopy();
     if (str != lowered && str != uppered) {
-        return Error.BECH32_MIXED_CASE_STRING_NOT_ALLOWED?;
+        return BECH32_MIXED_CASE_STRING_NOT_ALLOWED~;
     }
     str = lowered;
 
-    usz! split_idx = str.rindex_of("1");
+    usz? split_idx = str.rindex_of("1");
 
     if (catch err = split_idx) {
-        return Error.BECH32_SEPARATOR_CHARACTER_NOT_FOUND?;
+        return BECH32_SEPARATOR_CHARACTER_NOT_FOUND~;
     } else if (split_idx == 0u) {
-        return Error.BECH32_MISSING_PREFIX?;
+        return BECH32_MISSING_PREFIX~;
     }
 
     String prefix = str[0: split_idx];
     String wordChars = str[split_idx + 1 .. str.len - 1];
 
-    if (wordChars.len < 6) { 
-        return Error.BECH32_DATA_TOO_SHORT?;
+    if (wordChars.len < 6) {
+        return BECH32_DATA_TOO_SHORT~;
     }
 
     int chk = prefix_chk(prefix)!;
-    
+
     CharArray words;
     for (int i = 0; i < wordChars.len; ++i) {
         char c = wordChars[i];
         ichar v = get_alphabet_char_idx(c);
-        if (v == -1i) {
-            return Error.BECH32_UNKOWN_CHARACTER?;
+        if (v == -1) {
+            return BECH32_UNKOWN_CHARACTER~;
         };
         chk = polymod_step(chk) ^ v;
 
@@ -201,13 +188,13 @@ fn Decoded*! __decode(String str, int limit = 90, int encoding_cost = 1) @privat
     }
 
     if (chk != encoding_cost) {
-        return Error.BECH32_INVALID_CHECKSUM?;
+        return BECH32_INVALID_CHECKSUM~;
     }
 
-    return mem::new(Decoded, { .prefix= prefix, .words= words.to_new_array() });
+    return mem::new(Decoded, { .prefix= prefix, .words= words.array_view() });
 }
 
- fn String! bech32_encode(String str, char[] words, int limit = 90){
+ fn String? bech32_encode(String str, char[] words, int limit = 90){
     return __encode(str, words, limit, ENCODING_BECH32);
  }
 
@@ -219,7 +206,7 @@ fn Decoded* bech32_decode_unsafe(String str, int limit = 90) {
     }
 }
 
-fn Decoded*! bech32_decode(String str, int limit = 90) {
+fn Decoded*? bech32_decode(String str, int limit = 90) {
     return __decode(str, limit, ENCODING_BECH32);
 }
 
@@ -231,10 +218,10 @@ fn Decoded* bech32m_decode_unsafe(String str, int limit = 90) {
     }
 }
 
-fn Decoded*! bech32m_decode(String str, int limit = 90) {
+fn Decoded*? bech32m_decode(String str, int limit = 90) {
     return __decode(str, limit, ENCODING_BECH32M);
 }
 
-fn String! bech32m_encode(String str, char[] words, int limit = 90){
+fn String? bech32m_encode(String str, char[] words, int limit = 90){
     return __encode(str, words, limit, ENCODING_BECH32M);
 }
